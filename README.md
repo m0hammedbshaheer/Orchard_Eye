@@ -8,7 +8,7 @@ microcontrollers and microprocessors
 Esp32 - capture images and send it to raspberrypi
 rapberrypi - store and process the data 
 
-frontend backend dashboard
+
 
 
 AI stack
