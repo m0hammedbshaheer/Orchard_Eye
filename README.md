@@ -3,7 +3,6 @@ Pheromone Trap integrated with IoT devices (Raspberry Pi and ESP-32) and artific
 # Contributors
 Mohammed Shaheer — Embedded Systems & AI Lead. Architected and wired up all the hardware magic — from circuit design to getting the electrons to behave. Also co-developed the computer vision model and handled data augmentation, turning raw trap images into intelligent insect predictions.
 Mosin Mushtaq — Full-Stack & IoT Integration Lead. Built the frontend, backend, and engineered the seamless bridge between the ESP32, Raspberry Pi, and the cloud.
-Kafeel Kunt — AI & Data Engineering. Co-developed the computer vision model and handled data augmentation, turning raw trap images into intelligent insect predictions.
 # Technology used
 microcontrollers and microprocessors
 Esp32 - capture images and send it to raspberrypi
