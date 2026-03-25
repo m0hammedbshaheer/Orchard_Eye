@@ -67,7 +67,7 @@ bool initCamera() {
   config.pixel_format = PIXFORMAT_JPEG;
 
   // Use SVGA for stability — step up to XGA/UXGA only after confirming PSRAM
-  config.frame_size   = FRAMESIZE_SVGA;  // 800x600
+  config.frame_size   = FRAMESIZE_UXGA;  // 800x600
   config.jpeg_quality = 6;               // 0=best, 63=worst
   config.fb_count     = 1;
 
