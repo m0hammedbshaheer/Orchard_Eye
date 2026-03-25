@@ -1,0 +1,261 @@
+{% extends "layout.html" %}
+
+{% block title %}Technology Stack{% endblock %}
+
+{% block content %}
+<div class="tech-container">
+    <div class="tech-header">
+        <h1>Technology Stack</h1>
+        <p class="subtitle">Powered by cutting-edge open-source tools</p>
+    </div>
+
+    <div class="tech-grid">
+        <!-- Backend -->
+        <div class="tech-card">
+            <div class="card-icon backend-icon">
+                <i class="fa-brands fa-python"></i>
+            </div>
+            <div class="card-content">
+                <h2>Backend Core</h2>
+                <ul class="tech-list">
+                    <li>
+                        <span class="tech-name">Python 3.11+</span>
+                        <span class="tech-desc">Robust and efficient server-side logic.</span>
+                    </li>
+                    <li>
+                        <span class="tech-name">Flask</span>
+                        <span class="tech-desc">Lightweight WSGI web application framework.</span>
+                    </li>
+                    <li>
+                        <span class="tech-name">Pandas</span>
+                        <span class="tech-desc">High-performance data manipulation and analysis.</span>
+                    </li>
+                    <li>
+                        <span class="tech-name">OpenCV</span>
+                        <span class="tech-desc">Real-time computer vision and image processing.</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Frontend -->
+        <div class="tech-card">
+            <div class="card-icon frontend-icon">
+                <i class="fa-brands fa-html5"></i>
+            </div>
+            <div class="card-content">
+                <h2>Frontend Experience</h2>
+                <ul class="tech-list">
+                    <li>
+                        <span class="tech-name">HTML5 & CSS3</span>
+                        <span class="tech-desc">Semantic structure with modern, responsive styling.</span>
+                    </li>
+                    <li>
+                        <span class="tech-name">JavaScript (ES6+)</span>
+                        <span class="tech-desc">Dynamic interactivity and client-side logic.</span>
+                    </li>
+                    <li>
+                        <span class="tech-name">Chart.js</span>
+                        <span class="tech-desc">Interactive and animated data visualization.</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Hardware & IoT -->
+        <div class="tech-card">
+            <div class="card-icon hardware-icon">
+                <i class="fa-solid fa-microchip"></i>
+            </div>
+            <div class="card-content">
+                <h2>Hardware & IoT</h2>
+                <ul class="tech-list">
+                    <li>
+                        <span class="tech-name">Raspberry Pi</span>
+                        <span class="tech-desc">Edge computing node for localized processing.</span>
+                    </li>
+                    <li>
+                        <span class="tech-name">ESP32-CAM</span>
+                        <span class="tech-desc">Low-power IoT camera module for field monitoring.</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Infrastructure -->
+        <div class="tech-card">
+            <div class="card-icon infra-icon">
+                <i class="fa-solid fa-network-wired"></i>
+            </div>
+            <div class="card-content">
+                <h2>Infrastructure</h2>
+                <ul class="tech-list">
+                    <li>
+                        <span class="tech-name">Cloudflare Tunnel</span>
+                        <span class="tech-desc">Secure, encrypted access to local services without exposing
+                            ports.</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Scoped Styles for Technology Page - Light Theme */
+    .tech-container {
+        padding: 4rem 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+        color: #2c3e50;
+    }
+
+    .tech-header {
+        text-align: center;
+        margin-bottom: 4rem;
+        animation: fadeInDown 0.8s ease-out;
+    }
+
+    .tech-header h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+        font-size: 1.2rem;
+        color: #6c757d;
+    }
+
+    .tech-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 2rem;
+    }
+
+    .tech-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 2rem;
+        display: flex;
+        gap: 1.5rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .tech-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        border-color: #dee2e6;
+    }
+
+    .card-icon {
+        flex-shrink: 0;
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+    }
+
+    .backend-icon {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+    }
+
+    .frontend-icon {
+        background: rgba(249, 115, 22, 0.1);
+        color: #f97316;
+    }
+
+    .hardware-icon {
+        background: rgba(168, 85, 247, 0.1);
+        color: #a855f7;
+    }
+
+    .infra-icon {
+        background: rgba(74, 222, 128, 0.1);
+        color: #4ade80;
+    }
+
+    .card-content h2 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.4rem;
+        color: #343a40;
+        font-weight: 700;
+    }
+
+    .tech-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .tech-list li {
+        margin-bottom: 1rem;
+        display: flex;
+        flex-direction: column;
+        border-bottom: 1px solid #f1f3f5;
+        padding-bottom: 1rem;
+    }
+
+    .tech-list li:last-child {
+        margin-bottom: 0;
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .tech-name {
+        font-weight: 600;
+        color: #212529;
+        font-size: 1.1rem;
+    }
+
+    .tech-desc {
+        color: #6c757d;
+        font-size: 0.95rem;
+        margin-top: 0.2rem;
+        line-height: 1.5;
+    }
+
+    @keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .tech-container {
+            padding: 2rem 1rem;
+        }
+
+        .tech-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .tech-card {
+            flex-direction: column;
+            text-align: center;
+            gap: 1rem;
+        }
+
+        .card-icon {
+            margin: 0 auto;
+        }
+
+        .card-content h2 {
+            margin-bottom: 1rem;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home | Pest Monitoring</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Main stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <!-- ================= HEADER ================= -->
+    <header>
+        <div class="container header-inner">
+            <div class="site-title">
+                IoT-based Pheromone Trap Monitoring
+            </div>
+
+            <nav class="site-nav">
+                <a href="/">Home</a>
+                <a href="/dashboard">Dashboard</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ================= HERO SECTION ================= -->
+    <section class="hero-nasa">
+        <div class="hero-overlay"></div>
+
+        <div class="hero-grid">
+            <div class="hero-text">
+                <h1>Smart Pest Monitoring for Agriculture</h1>
+
+                <p>
+                    An IoT-based pheromone trap monitoring system designed for
+                    research-driven, sustainable, and data-backed pest management.
+                </p>
+
+                <div class="hero-buttons">
+                    <a href="/dashboard" class="btn-primary">Open Dashboard</a>
+                    <a href="#about" class="btn-outline">Learn More</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= PROJECT OVERVIEW (EDITORIAL) ================= -->
+    <section id="about" class="section fade-up">
+        <div class="container">
+
+            <h2>Project Overview</h2>
+
+            <p>
+                This research project focuses on monitoring insect populations using
+                IoT-enabled pheromone traps deployed in agricultural fields. Images are
+                captured using ESP32-CAM devices and processed locally on a Raspberry Pi
+                for long-term storage, analysis, and decision support.
+            </p>
+
+            <h3>Why This Matters</h3>
+
+            <ul>
+                <li>Early detection of pest population growth</li>
+                <li>Reduced dependence on excessive pesticide spraying</li>
+                <li>Support for integrated pest management strategies</li>
+                <li>Reliable datasets for agricultural and entomological research</li>
+            </ul>
+
+        </div>
+    </section>
+
+    <!-- ================= FOOTER ================= -->
+    <footer>
+        <div class="container">
+            <p>
+                Research Project<br>
+                Mohammad Shaheer, Mosin Mushtaq, Sarim Arjumand
+            </p>
+            <small>Students of CAIML</small>
+        </div>
+    </footer>
+
+</body>
+</html>

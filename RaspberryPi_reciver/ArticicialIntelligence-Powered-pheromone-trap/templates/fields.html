@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+
+{% block title %}Fields{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <h1>Monitored Fields</h1>
+    <p class="subtitle">Overview of all active monitoring sites</p>
+</div>
+
+<div class="stats-grid">
+    {% for field in fields %}
+    <a href="{{ url_for('field_detail', field_id=field.id) }}" class="card"
+        style="text-decoration: none; color: inherit; display: block; transition: transform 0.2s;">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+            <h3 style="font-size: 1.1rem; color: var(--primary-color); margin: 0;">{{ field.name }}</h3>
+            <span class="value severity-{{ field.severity }}" style="font-size: 1rem;">{{ field.severity }}</span>
+        </div>
+        <p style="margin: 0.5rem 0; color: #666;">{{ field.crop }} | {{ field.location }}</p>
+        <div style="display: flex; gap: 1rem; margin-top: 1rem; font-size: 0.9rem;">
+            <div><strong>{{ field.trap_count }}</strong> Traps</div>
+            <div><strong>{{ field.pest_24h }}</strong> Pests (24h)</div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}

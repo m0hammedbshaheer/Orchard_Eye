@@ -1,0 +1,99 @@
+from flask import Flask, render_template, send_file, request, abort
+import os
+
+app = Flask(__name__)
+
+# Base directories
+BASE_DIR = "/home/pi/receiver"
+DATA_DIR = "/pest_research_data"
+
+# =====================================================
+# MAIN PAGES
+# =====================================================
+
+@app.route("/")
+def home():
+    return render_template("index.html", body_class="landing-page")
+
+
+@app.route("/dashboard")
+def dashboard():
+    return render_template("dashboard.html", body_class="dashboard-page")
+
+
+@app.route("/images")
+def images():
+    return render_template("images.html", body_class="dashboard-page")
+
+
+# =====================================================
+# DASHBOARD API (POC DATA)
+# =====================================================
+
+@app.route("/api/dashboard")
+def dashboard_api():
+    return send_file(
+        os.path.join(BASE_DIR, "mock/dashboard_data.json"),
+        mimetype="application/json"
+    )
+
+
+# =====================================================
+# IMAGE LIST API
+# =====================================================
+
+@app.route("/api/images")
+def images_api():
+    image_urls = []
+
+    for root, _, files in os.walk(DATA_DIR):
+        for f in files:
+            if f.lower().endswith((".jpg", ".jpeg", ".png")):
+                image_urls.append(
+                    "/data-image?path=" + os.path.join(root, f)
+                )
+
+    return {"images": image_urls[:200]}  # limit for safety
+
+
+# =====================================================
+# SECURE IMAGE SERVING
+# =====================================================
+
+@app.route("/data-image")
+def serve_data_image():
+    path = request.args.get("path")
+    if not path:
+        abort(400)
+
+    full_path = os.path.realpath(path)
+
+    # Security check: ensure path is inside pest data directory
+    if not full_path.startswith(DATA_DIR):
+        abort(403)
+
+    if not os.path.exists(full_path):
+        abort(404)
+
+    return send_file(full_path)
+
+
+# =====================================================
+# FAVICON (optional)
+# =====================================================
+
+@app.route("/favicon.ico")
+def favicon():
+    favicon_path = os.path.join(BASE_DIR, "static", "favicon.ico")
+    if os.path.exists(favicon_path):
+        return send_file(favicon_path)
+    abort(404)
+
+
+# =====================================================
+# RUN
+# =====================================================
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+
