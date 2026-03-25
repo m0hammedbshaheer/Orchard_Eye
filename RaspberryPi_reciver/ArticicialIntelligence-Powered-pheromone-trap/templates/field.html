@@ -1,0 +1,103 @@
+{% extends "layout.html" %}
+
+{% block title %}Field: {{ field.name }}{% endblock %}
+
+{% block content %}
+<div class="field-header" style="margin-bottom: 2rem;">
+    <a href="{{ url_for('dashboard') }}" style="color: #666; text-decoration: none;">&larr; Back to Dashboard</a>
+    <h1>{{ field.name }}</h1>
+    <div style="display: flex; gap: 2rem; color: #555; margin-top: 0.5rem;">
+        <span><strong>Location:</strong> {{ field.location }}</span>
+        <span><strong>Crop:</strong> {{ field.crop }}</span>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="card">
+        <h3>Pest Count (24h)</h3>
+        <div class="value">{{ field.pest_24h }}</div>
+    </div>
+    <div class="card">
+        <h3>Severity</h3>
+        <div class="value severity-{{ field.severity }}">{{ field.severity }}</div>
+    </div>
+    <div class="card">
+        <h3>Recommended Action</h3>
+        <div class="value" style="font-size: 1.25rem;">
+            {% if field.severity == 'Critical' %}Immediate Intervention{% endif %}
+            {% if field.severity == 'High' %}Apply Targeted Pesticide{% endif %}
+            {% if field.severity == 'Moderate' %}Monitor Closely{% endif %}
+            {% if field.severity == 'Low' %}Routine Check{% endif %}
+        </div>
+    </div>
+    <div class="card">
+        <h3>Active Traps</h3>
+        <div class="value">{{ field.traps|length }}</div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2rem;">
+    <div class="card">
+        <h3>Trap-wise Distribution</h3>
+        <canvas id="trapDistributionChart"></canvas>
+    </div>
+    <div class="card">
+        <h3>Severity Trend</h3>
+        <canvas id="severityChart"></canvas>
+    </div>
+</div>
+
+<h2 style="margin-top: 3rem; margin-bottom: 1rem;">Trap Details</h2>
+<div class="stats-grid">
+    {% for trap in field.traps %}
+    <div class="card">
+        <div style="display: flex; justify-content: space-between;">
+            <h3>{{ trap.id }}</h3>
+            <span style="font-size: 0.8rem; color: #999;">{{ trap.last_updated }}</span>
+        </div>
+        <p style="margin: 0.5rem 0;">{{ trap.position }}</p>
+        <div class="value">{{ trap.pest_24h }} <span
+                style="font-size: 1rem; color: #666; font-weight: 400;">pests</span></div>
+        <div style="margin-top: 1rem; text-align: right;">
+            <a href="#" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">View Camera Feed
+                &rarr;</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Trap Distribution Chart
+    const trapCtx = document.getElementById('trapDistributionChart').getContext('2d');
+    new Chart(trapCtx, {
+        type: 'bar',
+        data: {
+            labels: [{% for trap in field.traps %}'{{ trap.id }}',{% endfor %}],
+        datasets: [{
+            label: 'Pest Count (24h)',
+            data: [{% for trap in field.traps %}{{ trap.pest_24h }}, {% endfor %}],
+        backgroundColor: '#27ae60'
+            }]
+        },
+        options: { responsive: true }
+    });
+
+    // Severity Trend Chart (Mock Data)
+    const severityCtx = document.getElementById('severityChart').getContext('2d');
+    new Chart(severityCtx, {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Infestation Level',
+                data: [10, 15, 12, 18, 25, 30, {{ field.pest_24h }}],
+            borderColor: '#c0392b',
+            fill: false
+        }]
+    },
+        options: { responsive: true }
+    });
+</script>
+{% endblock %}

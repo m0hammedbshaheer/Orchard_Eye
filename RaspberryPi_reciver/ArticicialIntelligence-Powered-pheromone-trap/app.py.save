@@ -1,0 +1,84 @@
+from flask import Flask, request, jsonify
+from datetime import datetime
+import os
+import json
+import csv
+import cv2
+
+app = Flask(__name__)
+
+# ===== CONFIG =====
+BASE_DATA = "/pest_research_data"
+FIELD = "apple_orchard_A"
+TRAP = "trap_001"
+# ==================
+
+TRAP_BASE = f"{BASE_DATA}/fields/{FIELD}/traps/{TRAP}"
+IMAGES_BASE = f"{TRAP_BASE}/images"
+DERIVED_ROI = f"{TRAP_BASE}/derived/roi"
+LOG_FILE = f"{TRAP_BASE}/logs.csv"
+CALIB_FILE = f"{TRAP_BASE}/calibration.json"
+
+
+def load_calibration():
+    with open(CALIB_FILE) as f:
+        return json.load(f)
+
+
+def crop_roi(image_path, roi):
+    img = cv2.imread(image_path)
+    x, y, w, h = roi["x"], roi["y"], roi["width"], roi["height"]
+    return img[y:y+h, x:x+w]
+
+
+@app.route("/")
+def home():
+    return "Raspberry Pi receiver is running!"
+
+
+@app.route("/upload", methods=["POST"])
+def upload():
+    if "image" not in request.files:
+        return jsonify({"status": "error", "msg": "No image"}), 400
+
+    image = request.files["image"]
+
+    now = datetime.now()
+    year = now.strftime("%Y")
+    month = now.strftime("%m")
+    ts = now.strftime("%Y-%m-%d_%H-%M-%S")
+
+    # ---- Save RAW image ----
+    save_dir = f"{IMAGES_BASE}/{year}/{month}"
+    os.makedirs(save_dir, exist_ok=True)
+
+    raw_path = f"{save_dir}/{ts}.jpg"
+    image.save(raw_path)
+
+    # ---- ROI crop ----
+    calib = load_calibration()
+    roi_img = crop_roi(raw_path, calib["roi"])
+
+    roi_path = f"{DERIVED_ROI}/{ts}_roi.jpg"
+    cv2.imwrite(roi_path, roi_img)
+
+    # ---- Log entry ----
+    with open(LOG_FILE, "a", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            now.isoformat(),
+            f"images/{year}/{month}/{ts}.jpg",
+            f"derived/roi/{ts}_roi.jpg",
+            "",   # count (to be filled by ML later)
+            ""    # density (to be filled later)
+        ])
+
+    return jsonify({
+        "status": "ok",
+        "saved_raw": raw_path,
+        "saved_roi": roi_path
+    })
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
