@@ -1,0 +1,87 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <h1>Dashboard Overview</h1>
+    <p class="subtitle">Real-time pheromone trap monitoring & pest analytics</p>
+</div>
+
+<!-- Level 1: Overall Stats -->
+<div class="stats-grid">
+    <div class="card">
+        <h3>Total Fields</h3>
+        <div class="value">{{ stats.total_fields }}</div>
+    </div>
+    <div class="card">
+        <h3>Active Traps</h3>
+        <div class="value">{{ stats.total_traps }}</div>
+    </div>
+    <div class="card">
+        <h3>Pest Count (24h)</h3>
+        <div class="value">{{ stats.pest_24h }}</div>
+    </div>
+    <div class="card">
+        <h3>Overall Severity</h3>
+        <div class="value severity-{{ stats.severity }}">{{ stats.severity }}</div>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+    <h3>7-Day Pest Trend</h3>
+    <canvas id="pestTrendChart" height="100"></canvas>
+</div>
+
+<!-- Level 2: Fields Quick Access -->
+<div style="margin-top: 3rem; text-align: center;">
+    <a href="{{ url_for('fields_list') }}" class="cta-button" style="text-decoration: none; font-weight: 500;">
+        View All Monitored Fields &rarr;
+    </a>
+</div>
+<!-- Hidden Data Container for Chart -->
+<div id="chartData" data-labels='{{ trend_labels | tojson | safe }}' data-counts='{{ trend_data | tojson | safe }}'
+    style="display: none;"></div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const ctx = document.getElementById('pestTrendChart').getContext('2d');
+
+    // Read data from data attributes to avoid IDE syntax errors in script tags
+    const dataContainer = document.getElementById('chartData');
+    const trendLabels = JSON.parse(dataContainer.dataset.labels);
+    const trendData = JSON.parse(dataContainer.dataset.counts);
+
+    console.log("Trend Labels:", trendLabels);
+    console.log("Trend Data:", trendData);
+
+    const pestTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: trendLabels,
+            datasets: [{
+                label: 'Total Pest Count',
+                data: trendData,
+                borderColor: '#e67e22',
+                backgroundColor: 'rgba(230, 126, 34, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: 'Weekly Infestation Trend'
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

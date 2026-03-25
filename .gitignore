@@ -1,0 +1,13 @@
+
+# Arduino build artifacts
+**/build/
+*.bin
+*.elf
+*.map
+*.merged.bin
+**/__pycache__/
+*.pyc
+*.log
+*.bak*
+*.save
+*.save.*

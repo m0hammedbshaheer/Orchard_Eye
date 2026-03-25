@@ -1,0 +1,138 @@
+RASPBERRY PI DEPLOYMENT GUIDE - PEST ANALYTICS
+================================================
+
+This guide will help you deploy the Pest Analytics web application on your Raspberry Pi
+and expose it to the internet securely using Cloudflare Tunnel.
+
+PREREQUISITES
+-------------
+1. Raspberry Pi (3B+ or 4 recommended) with Raspberry Pi OS installed.
+2. Internet connection on the Pi.
+3. A Cloudflare account and a bought domain name (added to Cloudflare).
+
+STEP 1: PREPARE THE RASPBERRY PI
+--------------------------------
+1. Update your system:
+   sudo apt update && sudo apt upgrade -y
+
+2. Install system dependencies (for OpenCV and building Python packages):
+   sudo apt install -y python3-pip python3-venv libgl1-mesa-glx libglib2.0-0
+
+STEP 2: GET THE CODE
+--------------------
+1. Copy your project files to the Raspberry Pi. You can use a USB drive, SCP, or Git.
+   Let's assume the code is in /home/pi/pest_showcase
+
+   cd /home/pi/pest_showcase
+
+STEP 3: PYTHON ENVIRONMENT SETUP
+--------------------------------
+1. Create a virtual environment to keep dependencies isolated:
+   python3 -m venv venv
+
+2. Activate the virtual environment:
+   source venv/bin/activate
+
+3. Install the Python dependencies:
+   pip install -r requirements.txt
+
+   *Note: If installation takes a long time, be patient. Building OpenCV on Pi can be slow.*
+
+STEP 4: TEST THE APPLICATION LOCALLY
+------------------------------------
+1. Run the application:
+   python app.py
+
+2. Open a browser on the Pi (or another device on the same network) and go to:
+   http://<YOUR_PI_IP_ADDRESS>:5000
+
+   You should see the landing page. Press Ctrl+C to stop the server for now.
+
+STEP 5: SETUP CLOUDFLARE TUNNEL (cloudflared)
+---------------------------------------------
+This exposes your local port 5000 to your domain (e.g., pests.yourdomain.com) securely.
+
+1. Install cloudflared on the Raspberry Pi:
+   # Add Cloudflare GPG key
+   curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+
+   # Add Cloudflare repo
+   echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared jammy main' | sudo tee /etc/apt/sources.list.d/cloudflared.list
+
+   # Install
+   sudo apt update && sudo apt install cloudflared
+
+2. Authenticate cloudflared:
+   cloudflared tunnel login
+
+   (This will give you a URL. Open it in a browser, log in to Cloudflare, and authorize the Pi.)
+
+3. Create a Tunnel:
+   cloudflared tunnel create pest-tunnel
+
+   (Copy the Tunnel ID/UUID it outputs. e.g., aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee)
+
+4. Configure the Tunnel:
+   Create a config file:
+   nano ~/.cloudflared/config.yml
+
+   Paste the following (replace UUID and DOMAIN):
+   
+   tunnel: <YOUR_TUNNEL_UUID>
+   credentials-file: /home/pi/.cloudflared/<YOUR_TUNNEL_UUID>.json
+   
+   ingress:
+     - hostname: <SUBDOMAIN.YOURDOMAIN.COM>
+       service: http://localhost:5000
+     - service: http_status:404
+
+   Save and exit (Ctrl+X, Y, Enter).
+
+5. Route the DNS:
+   cloudflared tunnel route dns pest-tunnel <SUBDOMAIN.YOURDOMAIN.COM>
+
+6. Run the Tunnel:
+   cloudflared tunnel run pest-tunnel
+
+   Now, visiting https://<SUBDOMAIN.YOURDOMAIN.COM> should show your app!
+
+STEP 6: RUN EVERYTHING AUTOMATICALLY ON BOOT
+--------------------------------------------
+To make sure the app and tunnel run even after a restart, use systemd.
+
+1. Create a service for the Python App:
+   sudo nano /etc/systemd/system/pest-app.service
+
+   Content:
+   [Unit]
+   Description=Pest Analytics Web App
+   After=network.target
+
+   [Service]
+   User=pi
+   WorkingDirectory=/home/pi/pest_showcase
+   ExecStart=/home/pi/pest_showcase/venv/bin/python app.py
+   Restart=always
+
+   [Install]
+   WantedBy=multi-user.target
+
+2. Enable and Start the App Service:
+   sudo systemctl enable pest-app
+   sudo systemctl start pest-app
+
+3. Install Cloudflare Tunnel as a Service:
+   sudo cloudflared service install
+   sudo systemctl start cloudflared
+
+   *Note: Cloudflare service uses the config in /etc/cloudflared/config.yml usually. 
+   You might need to move your config there:
+   sudo mkdir -p /etc/cloudflared
+   sudo cp ~/.cloudflared/config.yml /etc/cloudflared/
+   sudo cp -r ~/.cloudflared/*.json /etc/cloudflared/
+
+DONE!
+-----
+Your Raspberry Pi is now a production server.
+- Web App runs on port 5000.
+- Cloudflare Tunnel forwards public traffic to localhost:5000.
