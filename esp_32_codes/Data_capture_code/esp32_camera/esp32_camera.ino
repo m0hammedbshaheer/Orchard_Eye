@@ -9,10 +9,10 @@
 #include <HTTPClient.h>
 
 // ---------- CONFIG ----------
-#define WIFI_SSID     "Pixel_1438"
-#define WIFI_PASS     "tauhapot"
-#define SERVER_URL    "http://10.242.101.244:5000/upload"
-#define CAPTURE_INTERVAL_MS  10000   // capture every 10 seconds
+#define WIFI_SSID            "Pixel_1438"
+#define WIFI_PASS            "tauhapot"
+#define SERVER_URL           "http://10.177.13.244:5000/upload"
+#define CAPTURE_INTERVAL_MS  10000
 // ----------------------------
 
 // ---------- CAMERA PIN MAP (AI-Thinker ESP32-CAM) ----------
@@ -32,7 +32,7 @@
 #define VSYNC_GPIO_NUM    25
 #define HREF_GPIO_NUM     23
 #define PCLK_GPIO_NUM     22
-#define LED_GPIO_NUM       4   // onboard flash LED
+#define LED_GPIO_NUM       4
 // -----------------------------------------------------------
 
 #define LOG(msg)        Serial.println(msg)
@@ -65,8 +65,10 @@ bool initCamera() {
   config.pin_reset    = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG;
-  config.frame_size   = FRAMESIZE_UXGA;   // 640x480 — good balance
-  config.jpeg_quality = 12;              // 0=best 63=worst
+
+  // Use SVGA for stability — step up to XGA/UXGA only after confirming PSRAM
+  config.frame_size   = FRAMESIZE_SVGA;  // 800x600
+  config.jpeg_quality = 6;               // 0=best, 63=worst
   config.fb_count     = 1;
 
   esp_err_t err = esp_camera_init(&config);
@@ -78,7 +80,7 @@ bool initCamera() {
   return true;
 }
 
-// ── Your original capture logic (unchanged) ─────────────────
+// ── Capture with warmup ──────────────────────────────────────
 camera_fb_t* captureWithWarmup() {
   LOG("[CAM] LED ON – warmup started");
   ledOn();
@@ -97,7 +99,7 @@ camera_fb_t* captureWithWarmup() {
 
 // ── WiFi connect ─────────────────────────────────────────────
 bool connectWiFi() {
-  LOG("[NET] Connecting to WiFi");
+  LOG("[NET] Connecting to WiFi...");
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   WiFi.setSleep(false);
   unsigned long t0 = millis();
@@ -120,23 +122,18 @@ bool postImage(camera_fb_t *fb) {
     LOG("[HTTP][ERROR] Null frame buffer");
     return false;
   }
-
   HTTPClient http;
   http.begin(SERVER_URL);
   http.addHeader("Content-Type", "image/jpeg");
-
   LOGF("[HTTP] POSTing %u bytes to %s", fb->len, SERVER_URL);
   int code = http.POST(fb->buf, fb->len);
-
+  http.end();
   if (code == 200) {
     LOG("[HTTP] Upload OK (200)");
-    http.end();
     return true;
-  } else {
-    LOGF("[HTTP][ERROR] Response code: %d", code);
-    http.end();
-    return false;
   }
+  LOGF("[HTTP][ERROR] Response code: %d", code);
+  return false;
 }
 
 // ── Setup ────────────────────────────────────────────────────
@@ -144,6 +141,13 @@ void setup() {
   Serial.begin(115200);
   pinMode(LED_GPIO_NUM, OUTPUT);
   ledOff();
+
+  // PSRAM check
+  if (!psramFound()) {
+    LOG("[FATAL] No PSRAM detected – halting");
+    while (true) delay(1000);
+  }
+  LOG("[INFO] PSRAM OK");
 
   if (!initCamera()) {
     LOG("[FATAL] Camera init failed – halting");
@@ -158,7 +162,6 @@ void setup() {
 
 // ── Loop ─────────────────────────────────────────────────────
 void loop() {
-  // Re-check WiFi, reconnect if dropped
   if (WiFi.status() != WL_CONNECTED) {
     LOG("[NET] WiFi lost – reconnecting");
     connectWiFi();
@@ -166,7 +169,6 @@ void loop() {
   }
 
   camera_fb_t *fb = captureWithWarmup();
-
   if (fb) {
     postImage(fb);
     esp_camera_fb_return(fb);
