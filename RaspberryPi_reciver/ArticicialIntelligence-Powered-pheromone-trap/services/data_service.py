@@ -278,3 +278,54 @@ def get_system_trend():
     # Format labels (e.g., "Mon", "Oct 25" or just "Day -X")
     # For chart, simple date string is fine
     return sorted_dates, counts
+
+def get_latest_capture(field_id, trap_id):
+    """
+    Returns the latest count for calculating the difference.
+    """
+    log_path = os.path.join(FIELDS_DIR, field_id, "traps", trap_id, "logs.csv")
+    if not os.path.exists(log_path):
+        return 0
+    try:
+        df = pd.read_csv(log_path)
+        if df.empty:
+            return 0
+        return int(df.iloc[-1]['pest_count'])
+    except:
+        return 0
+
+def save_real_capture(field_id, trap_id, current_count, difference, image_url):
+    """
+    Saves a real capture from the ESP32.
+    It appends the new reading to the trap's logs.csv.
+    """
+    field_dir = os.path.join(FIELDS_DIR, field_id)
+    trap_dir = os.path.join(field_dir, "traps", trap_id)
+    
+    # Ensure directories exist
+    os.makedirs(trap_dir, exist_ok=True)
+    
+    # Ensure meta.json exists (create basic if not)
+    meta_path = os.path.join(trap_dir, "meta.json")
+    if not os.path.exists(meta_path):
+        with open(meta_path, 'w') as f:
+            json.dump({"id": trap_id, "name": trap_id, "status": "Active", "battery": "100%"}, f)
+            
+    # Also ensure field meta exists
+    field_meta = os.path.join(field_dir, "meta.json")
+    if not os.path.exists(field_meta):
+        with open(field_meta, 'w') as f:
+            json.dump({"name": field_id, "location": "Unknown", "crop": "Unknown"}, f)
+    
+    log_path = os.path.join(trap_dir, "logs.csv")
+    is_new = not os.path.exists(log_path)
+    
+    with open(log_path, 'a') as f:
+        # Check if difference column is missing
+        if is_new or os.path.getsize(log_path) == 0:
+            f.write("timestamp,pest_count,image_url,hourly_difference\n")
+            
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        f.write(f"{timestamp},{current_count},{image_url},{difference}\n")
+        
+    return True

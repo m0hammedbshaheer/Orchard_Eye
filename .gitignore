@@ -11,3 +11,21 @@
 *.bak*
 *.save
 *.save.*
+
+# Python Virtual Environment
+venv/
+env/
+.env
+
+# AI & YOLO Artifacts
+*.pt
+runs/
+yolov8n.pt
+
+# Live Application Data (Prevent committing live ESP32 traps over Github)
+**/static/img/gallery/*
+**/pest_research_data/**/logs.csv
+**/pest_research_data/**/meta.json
+
+# Mac OS Specific
+.DS_Store

@@ -1,8 +1,27 @@
 
 from flask import Flask, render_template, request, jsonify
-from services.data_service import get_all_fields, get_field_details, get_all_images, get_system_trend
+from services.data_service import get_all_fields, get_field_details, get_all_images, get_system_trend, get_latest_capture, save_real_capture
+import os
+import uuid
+from datetime import datetime
+import cv2
+from ultralytics import YOLO
 
 app = Flask(__name__)
+
+# Initialize ML model
+# Wait for best.pt to be placed here, or fallback to yolov8n.pt if not found just to not crash
+MODEL_PATH = "pest_model/weights/best.pt"
+try:
+    if os.path.exists(MODEL_PATH):
+        model = YOLO(MODEL_PATH)
+        print("Loaded customized YOLO model from", MODEL_PATH)
+    else:
+        model = YOLO("yolov8n.pt")
+        print("Fallback to base yolov8n.pt")
+except Exception as e:
+    print(f"Error loading model: {e}")
+    model = None
 
 @app.route('/')
 def landing():
@@ -60,8 +79,60 @@ def developers():
 
 @app.route('/upload', methods=['POST'])
 def upload():
-    # Stub for image upload from ESP32
-    return jsonify({"status": "success", "message": "Image received (mock)"}), 200
+    # Real image upload from ESP32
+    if 'image' not in request.files:
+        return jsonify({"status": "error", "message": "No image part"}), 400
+        
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({"status": "error", "message": "No selected file"}), 400
+        
+    field_id = request.form.get('field_id', 'Unknown_Field')
+    trap_id = request.form.get('trap_id', 'Unknown_Trap')
+    
+    # Save the original image uniquely
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    gallery_dir = os.path.join(base_dir, "static", "img", "gallery")
+    os.makedirs(gallery_dir, exist_ok=True)
+    
+    unique_filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}.jpg"
+    filepath = os.path.join(gallery_dir, unique_filename)
+    file.save(filepath)
+    
+    # Run YOLO Inference
+    current_count = 0
+    if model is not None:
+        try:
+            results = model.predict(filepath, conf=0.25)
+            # results is a list of Results objects. We take the first one.
+            result = results[0]
+            current_count = len(result.boxes)
+            
+            # Save the image with bounding boxes drawn over it
+            annotated_img = result.plot()
+            cv2.imwrite(filepath, annotated_img)
+        except Exception as e:
+            print(f"Inference error: {e}")
+            return jsonify({"status": "error", "message": f"Inference error: {e}"}), 500
+    
+    # Calculate difference
+    previous_count = get_latest_capture(field_id, trap_id)
+    difference = current_count - previous_count
+    
+    # Create the URL that the frontend can load to see this image
+    image_url = f"/static/img/gallery/{unique_filename}"
+    
+    # Update the local CSV logs
+    save_real_capture(field_id, trap_id, current_count, difference, image_url)
+    
+    return jsonify({
+        "status": "success", 
+        "message": "Image processed successfully",
+        "current_count": current_count,
+        "previous_count": previous_count,
+        "difference": difference,
+        "image_url": image_url
+    }), 200
 
 if __name__ == '__main__':
     # Hosted on 0.0.0.0 to be accessible via Tunnel/Network
