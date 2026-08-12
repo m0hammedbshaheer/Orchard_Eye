@@ -1,0 +1,27 @@
+{
+  "name": "artificialintelligence-powered-pheromone-trap",
+  "version": "1.0.0",
+  "description": "Pheromone Trap integrated with IoT devices (Raspberry Pi and ESP-32) and artificial intelligence technology to estimate live count of insects, helping in early detection and estimation of infestation, subsequently helping farmers estimate pesticide spray, preventing pesticide resistance and overuse of pesticides.\r # Contributors\r Mohammed Shaheer — Embedded Systems & AI Lead. Architected and wired up all the hardware magic — from circuit design to getting the electrons to behave. Also co-developed the computer vision model and handled data augmentation, turning raw trap images into intelligent insect predictions.\r Mosin Mushtaq — Full-Stack & IoT Integration Lead. Built the frontend, backend, and engineered the seamless bridge between the ESP32, Raspberry Pi, and the cloud.\r # Technology used\r microcontrollers and microprocessors:\r Esp32 - capture images and send it to cloud server\r rapberrypi - download,store and process the data then publish results on the website skuast.store.py\r Powersupply: \r 5v Battery to give power supple to esp32 which lasts more than 6 months\r solar power to extend batterylife\r Casing\r 3D printed custom casing for the project\r ## AI & Server Workflow\r Our implementation handles real-time data flow from capturing images to rendering dynamic analytics.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/m0hammedbshaheer/ArtificialIntelligence-Powered-Pheromone-Trap.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/m0hammedbshaheer/ArtificialIntelligence-Powered-Pheromone-Trap/issues"
+  },
+  "homepage": "https://github.com/m0hammedbshaheer/ArtificialIntelligence-Powered-Pheromone-Trap#readme",
+  "dependencies": {
+    "jsonfile": "^6.2.1",
+    "moment": "^2.30.1",
+    "random": "^5.4.1",
+    "simple-git": "^3.36.0"
+  }
+}
