@@ -1,0 +1,6 @@
+Make a python script that takes photo stores it in folder
+look up apropriate ways to send data to a server ie text json and database
+make a python + bash script to upload picture + metadeta to the server
+meta deta has to inlcude time of the picture taken, gps location,trap id
+if database doesnt have data make it a new entry;
+

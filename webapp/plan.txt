@@ -1,0 +1,4 @@
+add a webbased application which takes uid code and lets a person sign in
+make a server where database stores pest id etc
+make model run on the server
+make a map on the webpage
