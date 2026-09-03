@@ -1,0 +1,364 @@
+/*************************************************************
+ * ESP32-CAM TRAP – FIELD FIRMWARE (LOGGING ENABLED)
+ *************************************************************/
+
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
+#include "esp_camera.h"
+#include <WiFi.h>
+#include "FS.h"
+#include "SD_MMC.h"
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+#include "esp_sleep.h"
+#include <time.h>
+
+/* ================= LOG MACROS ================= */
+#define LOG(x)        Serial.println(x)
+#define LOGF(fmt, ...) Serial.printf(fmt "\n", ##__VA_ARGS__)
+
+/* ================= CAMERA PINS ================= */
+#define PWDN_GPIO_NUM     32
+#define RESET_GPIO_NUM    -1
+#define XCLK_GPIO_NUM      0
+#define SIOD_GPIO_NUM     26
+#define SIOC_GPIO_NUM     27
+#define Y9_GPIO_NUM       35
+#define Y8_GPIO_NUM       34
+#define Y7_GPIO_NUM       39
+#define Y6_GPIO_NUM       36
+#define Y5_GPIO_NUM       21
+#define Y4_GPIO_NUM       19
+#define Y3_GPIO_NUM       18
+#define Y2_GPIO_NUM        5
+#define VSYNC_GPIO_NUM    25
+#define HREF_GPIO_NUM     23
+#define PCLK_GPIO_NUM     22
+
+#define LED_GPIO 4
+
+/* ================= CONFIG ================= */
+char FIELD_ID[32] = "unknown_field";
+char TRAP_ID[32]  = "trap_unknown";
+char WIFI_SSID[64] = "Pixel 8 Pro";
+char WIFI_PASS[64] = "shahh@44r";
+char SERVER_URL[128] = "https://pi.skuast.store/upload";
+
+int CAPTURE_INTERVAL = 300;
+int JPEG_QUALITY     = 6;
+int LED_POWER        = 180;
+int EXPOSURE_BOOST   = 1;
+int UPLOAD_TIMEOUT  = 15000;
+
+/* ================= LED ================= */
+void ledOn() {
+  ledcAttach(LED_GPIO, 5000, 8);
+  ledcWrite(LED_GPIO, LED_POWER);
+}
+void ledOff() {
+  ledcWrite(LED_GPIO, 0);
+  ledcDetach(LED_GPIO);
+}
+
+/* ================= LOAD CONFIG ================= */
+void loadConfig() {
+  LOG("[CFG] Loading config.txt");
+
+  File f = SD_MMC.open("/config.txt");
+  if (!f) {
+    LOG("[CFG][ERROR] config.txt NOT FOUND");
+    return;
+  }
+
+  while (f.available()) {
+    String line = f.readStringUntil('\n');
+    line.trim();
+    if (!line.length() || line.startsWith("#")) continue;
+
+    int eq = line.indexOf('=');
+    if (eq < 0) continue;
+
+    String k = line.substring(0, eq);
+    String v = line.substring(eq + 1);
+    k.trim(); v.trim();
+
+    if (k == "FIELD_ID") v.toCharArray(FIELD_ID, sizeof(FIELD_ID));
+    else if (k == "TRAP_ID") v.toCharArray(TRAP_ID, sizeof(TRAP_ID));
+    else if (k == "WIFI_SSID") v.toCharArray(WIFI_SSID, sizeof(WIFI_SSID));
+    else if (k == "WIFI_PASS") v.toCharArray(WIFI_PASS, sizeof(WIFI_PASS));
+    else if (k == "SERVER_URL") v.toCharArray(SERVER_URL, sizeof(SERVER_URL));
+    else if (k == "CAPTURE_INTERVAL") CAPTURE_INTERVAL = v.toInt();
+    else if (k == "JPEG_QUALITY") JPEG_QUALITY = v.toInt();
+    else if (k == "LED_POWER") LED_POWER = v.toInt();
+    else if (k == "EXPOSURE_BOOST") EXPOSURE_BOOST = v.toInt();
+    else if (k == "UPLOAD_TIMEOUT") UPLOAD_TIMEOUT = v.toInt();
+  }
+
+  f.close();
+
+  LOG("[CFG] Loaded successfully");
+  LOGF("[CFG] FIELD_ID=%s", FIELD_ID);
+  LOGF("[CFG] TRAP_ID=%s", TRAP_ID);
+  LOGF("[CFG] SERVER_URL=%s", SERVER_URL);
+}
+
+/* ================= CAMERA ================= */
+bool initCamera() {
+  LOG("[CAM] Initializing camera");
+
+  camera_config_t c;
+  memset(&c, 0, sizeof(c));
+
+  // ---------- CLOCK & FORMAT ----------
+  c.ledc_channel = LEDC_CHANNEL_0;
+  c.ledc_timer   = LEDC_TIMER_0;
+  c.pixel_format = PIXFORMAT_JPEG;
+  c.frame_size   = FRAMESIZE_UXGA;   // 1600x1200
+  c.jpeg_quality = JPEG_QUALITY;     // lower = better quality
+  c.fb_count     = 1;
+  c.xclk_freq_hz = 20000000;
+
+  // ---------- PIN MAP (AI THINKER) ----------
+  c.pin_d0 = Y2_GPIO_NUM;
+  c.pin_d1 = Y3_GPIO_NUM;
+  c.pin_d2 = Y4_GPIO_NUM;
+  c.pin_d3 = Y5_GPIO_NUM;
+  c.pin_d4 = Y6_GPIO_NUM;
+  c.pin_d5 = Y7_GPIO_NUM;
+  c.pin_d6 = Y8_GPIO_NUM;
+  c.pin_d7 = Y9_GPIO_NUM;
+
+  c.pin_xclk = XCLK_GPIO_NUM;
+  c.pin_pclk = PCLK_GPIO_NUM;
+  c.pin_vsync = VSYNC_GPIO_NUM;
+  c.pin_href  = HREF_GPIO_NUM;
+  c.pin_sccb_sda = SIOD_GPIO_NUM;
+  c.pin_sccb_scl = SIOC_GPIO_NUM;
+  c.pin_pwdn  = PWDN_GPIO_NUM;
+  c.pin_reset = RESET_GPIO_NUM;
+
+  // ---------- INIT ----------
+  esp_err_t err = esp_camera_init(&c);
+  if (err != ESP_OK) {
+    LOGF("[CAM][ERROR] Init failed: 0x%x", err);
+    return false;
+  }
+
+  // ---------- SENSOR TUNING ----------
+  sensor_t *s = esp_camera_sensor_get();
+  if (!s) {
+    LOG("[CAM][ERROR] Sensor not found");
+    return false;
+  }
+
+  // Auto controls ON
+  s->set_gain_ctrl(s, 1);
+  s->set_exposure_ctrl(s, 1);
+  s->set_awb_gain(s, 1);
+  s->set_whitebal(s, 1);
+
+  // Image tuning
+  s->set_brightness(s, EXPOSURE_BOOST);   // usually 0–2
+  s->set_contrast(s, 1);
+  s->set_saturation(s, 0);
+  s->set_sharpness(s, 1);
+
+  // Low-light friendly
+  s->set_denoise(s, 1);
+  s->set_special_effect(s, 0);
+
+  LOG("[CAM] Camera ready");
+  return true;
+}
+
+/* ================= WIFI ================= */
+camera_fb_t* captureWithWarmup() {
+  LOG("[CAM] LED ON – warmup started");
+  ledOn();
+
+  // Let sensor + exposure stabilize
+  delay(5000);
+
+  // Flush bad frames (VERY IMPORTANT)
+  for (int i = 0; i < 6; i++) {
+    camera_fb_t *tmp = esp_camera_fb_get();
+    if (tmp) esp_camera_fb_return(tmp);
+    delay(120);
+  }
+
+  LOG("[CAM] Capturing final frame");
+  camera_fb_t *fb = esp_camera_fb_get();
+
+  ledOff();
+  LOG("[CAM] LED OFF");
+
+  return fb;
+}
+
+
+bool connectWiFi() {
+  LOG("[NET] Connecting to WiFi");
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+
+  unsigned long t0 = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - t0 < 15000) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    LOG("\n[NET] WiFi connected");
+    LOGF("[NET] IP: %s", WiFi.localIP().toString().c_str());
+    return true;
+  }
+
+  LOG("\n[NET][ERROR] WiFi FAILED");
+  return false;
+}
+WiFi.setSleep(false);
+
+
+/* ================= UPLOAD ================= */
+bool uploadImage(const char* path) {
+  LOGF("[UPLOAD] Opening %s", path);
+
+  File f = SD_MMC.open(path);
+  if (!f) {
+    LOG("[UPLOAD][ERROR] File open failed");
+    return false;
+  }
+
+  WiFiClientSecure client;
+  client.setInsecure();
+
+  if (!client.connect("pi.skuast.store", 443)) {
+    LOG("[UPLOAD][ERROR] TLS connect failed");
+    f.close();
+    return false;
+  }
+
+  String boundary = "----ESP32Boundary";
+
+  String bodyStart =
+    "--" + boundary + "\r\n"
+    "Content-Disposition: form-data; name=\"field\"\r\n\r\n" + String(FIELD_ID) + "\r\n"
+    "--" + boundary + "\r\n"
+    "Content-Disposition: form-data; name=\"trap\"\r\n\r\n" + String(TRAP_ID) + "\r\n"
+    "--" + boundary + "\r\n"
+    "Content-Disposition: form-data; name=\"image\"; filename=\"img.jpg\"\r\n"
+    "Content-Type: image/jpeg\r\n\r\n";
+
+  String bodyEnd = "\r\n--" + boundary + "--\r\n";
+
+  int contentLength = bodyStart.length() + f.size() + bodyEnd.length();
+
+  // ---------- HTTP HEADERS ----------
+  client.printf(
+    "POST /upload HTTP/1.1\r\n"
+    "Host: pi.skuast.store\r\n"
+    "Content-Type: multipart/form-data; boundary=%s\r\n"
+    "Content-Length: %d\r\n"
+    "Connection: close\r\n\r\n",
+    boundary.c_str(),
+    contentLength
+  );
+
+  // ---------- BODY ----------
+  client.print(bodyStart);
+
+  uint8_t buf[1024];
+  while (f.available()) {
+    int n = f.read(buf, sizeof(buf));
+    client.write(buf, n);
+  }
+
+  client.print(bodyEnd);
+  f.close();
+
+  // ---------- RESPONSE ----------
+  unsigned long t0 = millis();
+  while (!client.available() && millis() - t0 < UPLOAD_TIMEOUT) {
+    delay(10);
+  }
+
+  if (!client.available()) {
+    LOG("[UPLOAD][ERROR] No server response");
+    client.stop();
+    return false;
+  }
+
+  String response = client.readStringUntil('\n');
+  LOGF("[UPLOAD] Server response: %s", response.c_str());
+
+  client.stop();
+  return response.indexOf("200") >= 0;
+}
+
+/* ================= SETUP ================= */
+void setup() {
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+  Serial.begin(115200);
+  delay(1000);
+
+  LOG("\n========== ESP32 BOOT ==========");
+
+  if (!SD_MMC.begin("/sdcard", true)) {
+    LOG("[SD][ERROR] Mount failed");
+    return;
+  }
+  LOG("[SD] Mounted");
+
+  SD_MMC.mkdir("/queue");
+
+  loadConfig();
+  if (!initCamera()) return;
+
+  bool online = connectWiFi();
+
+  LOG("[CAM] Capturing image");
+  camera_fb_t *fb = captureWithWarmup();
+
+  if (!fb) {
+    LOG("[CAM][ERROR] Final capture failed");
+    return;
+  }
+
+
+
+  if (!fb) {
+    LOG("[CAM][ERROR] Capture failed");
+    return;
+  }
+
+  char path[96];
+  sprintf(path, "/queue/%s_%lu.jpg", TRAP_ID, millis());
+
+  File img = SD_MMC.open(path, FILE_WRITE);
+  img.write(fb->buf, fb->len);
+  img.close();
+  esp_camera_fb_return(fb);
+  esp_camera_deinit();
+  delay(300);
+
+  
+
+
+
+
+  LOGF("[SD] Saved %s", path);
+
+  if (online && uploadImage(path)) {
+    LOG("[UPLOAD] Success, deleting local copy");
+    SD_MMC.remove(path);
+  } else {
+    LOG("[UPLOAD] Failed, kept in queue");
+  }
+
+  LOGF("[SLEEP] Sleeping %d sec", CAPTURE_INTERVAL);
+  esp_sleep_enable_timer_wakeup((uint64_t)CAPTURE_INTERVAL * 1000000ULL);
+  esp_deep_sleep_start();
+}
+
+void loop() {}
+
+heres the old code with warmup to like fully uilize led make the new code and make it sd card independent

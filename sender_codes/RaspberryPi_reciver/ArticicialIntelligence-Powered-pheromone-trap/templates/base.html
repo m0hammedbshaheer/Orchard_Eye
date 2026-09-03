@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}OrchardEye{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="{{ body_class }}">
+
+<header>
+    <div class="container header-inner">
+        <h1 class="site-title">OrchardEye</h1>
+        <nav class="site-nav">
+            <a href="/">Home</a>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/images">Images</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+    {% block content %}{% endblock %}
+</main>
+
+<footer>
+    <div class="container">
+        <p>
+            OrchardEye - Smart Orchard Pest Monitoring System<br>
+            Mohammad Shaheer, Mosin Mushtaq<br>
+            <small>Students of CAIML</small>
+        </p>
+    </div>
+</footer>
+
+</body>
+</html>

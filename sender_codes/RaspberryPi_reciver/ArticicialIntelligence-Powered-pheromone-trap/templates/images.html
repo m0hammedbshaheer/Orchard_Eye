@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+
+{% block title %}Image Gallery{% endblock %}
+
+{% block content %}
+<h1>Captured Images</h1>
+<div class="filters" style="margin-bottom: 2rem; display: flex; gap: 1rem;">
+    <button style="padding: 0.5rem 1rem; border: 1px solid #ccc; background: white; border-radius: 4px;">All
+        Fields</button>
+    <button style="padding: 0.5rem 1rem; border: 1px solid #ccc; background: white; border-radius: 4px;">All
+        Traps</button>
+    <button style="padding: 0.5rem 1rem; border: 1px solid #ccc; background: white; border-radius: 4px;">Latest
+        24h</button>
+</div>
+
+<div class="image-grid">
+    {% for image in images %}
+    <div class="image-card">
+        <img src="{{ image.url }}" alt="Trap Image">
+        <div class="image-info">
+            <div style="display: flex; justify-content: space-between;">
+                <strong>{{ image.trap }}</strong>
+                <span style="color: #666; font-size: 0.9rem;">{{ image.timestamp }}</span>
+            </div>
+            <p style="margin: 0.5rem 0; font-size: 0.9rem; color: #555;">{{ image.field }}</p>
+            <div style="margin-top: 0.5rem;">
+                <span style="background: #e9ecef; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">To: {{
+                    image.type }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

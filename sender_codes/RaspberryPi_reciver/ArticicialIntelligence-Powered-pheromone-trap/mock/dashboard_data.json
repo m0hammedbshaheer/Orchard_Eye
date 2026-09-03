@@ -1,0 +1,63 @@
+
+
+
+  "active_traps": 9,
+  "total_traps": 10,
+  "pest_count_24h": 213,
+  "alerts_active": 5,
+  "overall_status": "High",
+
+  "pest_count_by_trap": [
+    { "trap": "South Section", "count": 34 },
+    { "trap": "Strawberry Field", "count": 15 },
+    { "trap": "Blueberry Field", "count": 19 },
+    { "trap": "Block 1", "count": 22 },
+    { "trap": "Block 2", "count": 43 },
+    { "trap": "Block 3", "count": 36 },
+    { "trap": "North Section", "count": 38 },
+    { "trap": "Zone A", "count": 35 },
+    { "trap": "Zone B", "count": 10 },
+    { "trap": "Zone C", "count": 15 }
+  ],
+
+  "severity_distribution": {
+    "low": 1,
+    "moderate": 4,
+    "high": 5,
+    "critical": 0
+  },
+
+  "recent_alerts": [
+    {
+      "trap": "Vineyard Trap - North Section",
+      "count": 37,
+      "severity": "High",
+      "time": "2/10/2026, 3:58 PM"
+    },
+    {
+      "trap": "Vineyard Trap - South Section",
+      "count": 21,
+      "severity": "Low",
+      "time": "2/10/2026, 3:58 PM"
+    },
+    {
+      "trap": "Citrus Farm Trap - Block 2",
+      "count": 22,
+      "severity": "Moderate",
+      "time": "2/10/2026, 3:58 PM"
+    },
+    {
+      "trap": "Citrus Farm Trap - Block 3",
+      "count": 54,
+      "severity": "High",
+      "time": "2/10/2026, 3:58 PM"
+    },
+    {
+      "trap": "Apple Orchard Trap - Zone A",
+      "count": 12,
+      "severity": "Low",
+      "time": "2/10/2026, 3:58 PM"
+    }
+  ]
+}
+
