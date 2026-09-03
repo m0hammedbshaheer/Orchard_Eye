@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collected Data Dashboard - OrchardEye</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Login Modal Overlay (Hidden if credentials exist in localStorage) -->
+    <div id="login-overlay" class="login-overlay" style="display: none;">
+        <div class="glass-card login-card text-center">
+            <h2 style="color: var(--accent); font-size: 1.8rem; margin-bottom: 6px;">Data Center Login</h2>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 24px;">Enter your User credentials to access collected telemetry</p>
+            
+            <div id="login-error" class="alert alert-danger" style="display: none;"></div>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="user-id">User ID</label>
+                    <input type="text" id="user-id" class="form-control" placeholder="USER_XXXX" required>
+                </div>
+                <div class="form-group">
+                    <label for="user-api-key">API Key</label>
+                    <input type="password" id="user-api-key" class="form-control" placeholder="user_xxxx" required>
+                </div>
+                <button type="submit" class="btn">Log In</button>
+            </form>
+            <p style="margin-top: 16px; font-size: 0.85rem; color: var(--text-secondary);">
+                Don't have an API key? <a href="request-api.html" style="color: var(--accent); text-decoration: none;">Request access</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Image Detailed View Modal -->
+    <div id="image-modal" class="login-overlay" style="display: none; cursor: pointer;">
+        <div class="glass-card" style="max-width: 600px; padding: 20px; position: relative;">
+            <span id="close-img-modal" style="position: absolute; top: 10px; right: 15px; font-size: 1.5rem; color: var(--text-secondary); cursor: pointer;">&times;</span>
+            <img id="modal-target-img" src="" alt="Detailed View" style="width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--border-color);">
+            <div id="modal-img-meta" style="margin-top: 12px; text-align: left; font-size: 0.9rem; line-height: 1.5;"></div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="nav-container">
+            <div class="brand-wrapper">
+                <img src="Assets/Caiml.png" alt="CAIML Logo" class="brand-logo">
+                <span class="brand-title">OrchardEye</span>
+            </div>
+            <nav class="options">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="map.html">Live Map</a></li>
+                    <li><a href="data.html" class="active">Collected Data</a></li>
+                    <li><a href="request-api.html">Request API</a></li>
+                    <li><a href="admin.html">Admin Panel</a></li>
+                    <li><a href="about.html">About Us</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <div class="admin-header">
+            <div>
+                <h1 style="font-size: 2.2rem;">Collected Database & Images</h1>
+                <p style="color: var(--text-secondary); font-size: 0.95rem;">Review and filter environmental logs and camera captures from registered traps</p>
+            </div>
+            <div class="user-info">
+                <span id="user-display" style="font-size: 0.9rem; color: var(--accent);">Logged in: USER_XXXX</span>
+                <button id="logout-btn" class="btn btn-secondary btn-sm">Log Out</button>
+            </div>
+        </div>
+
+        <div id="data-error-msg" class="alert alert-danger" style="display: none; margin-bottom: 20px;"></div>
+
+        <!-- Filter Bar -->
+        <div class="glass-card" style="padding: 20px; margin-bottom: 30px; display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
+            <div class="form-group" style="margin: 0; flex: 1; min-width: 200px;">
+                <label for="trap-filter" style="margin-bottom: 6px;">Filter by Trap ID</label>
+                <select id="trap-filter" class="form-control">
+                    <option value="ALL">All Traps</option>
+                </select>
+            </div>
+            <div style="font-size: 0.9rem; color: var(--text-secondary);">
+                Total Records Loaded: <span id="record-count" style="color: var(--accent); font-weight: bold;">0</span>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Left Side: Table of Database Records -->
+            <div class="glass-card" style="padding: 24px;">
+                <h3 style="color: var(--accent); margin-bottom: 16px; font-size: 1.25rem;">Telemetry Logs</h3>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Trap ID</th>
+                                <th>Location</th>
+                                <th>Timestamp</th>
+                                <th>Temp (°C)</th>
+                                <th>Humidity (%)</th>
+                                <th>Battery (%)</th>
+                                <th>AI Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="telemetry-table-body">
+                            <tr>
+                                <td colspan="7" style="text-align: center; color: var(--text-muted);">No records loaded.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Right Side: Image Gallery -->
+            <div class="glass-card" style="padding: 24px;">
+                <h3 style="color: var(--accent); margin-bottom: 16px; font-size: 1.25rem;">Captured Pest Images</h3>
+                <div id="gallery" class="gallery-grid">
+                    <!-- Gallery elements will load here -->
+                </div>
+                <div id="gallery-empty" style="text-align: center; color: var(--text-muted); padding: 40px 0; display: none;">
+                    No images captured for the selected filter.
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div>
+            <p>Developed at SKUAST-K CAIML (Center for AI & Machine Learning)</p>
+            <p style="font-size: 0.8rem; margin-top: 4px; color: var(--text-muted);">&copy; 2026 OrchardEye Project. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_BASE = "http://localhost:8000";
+        let allRecords = [];
+        let userId = "";
+        let apiKey = "";
+
+        // Authentication checks
+        document.addEventListener("DOMContentLoaded", () => {
+            userId = localStorage.getItem("orchardeye_user_id");
+            apiKey = localStorage.getItem("orchardeye_user_api_key");
+
+            if (!userId || !apiKey) {
+                showLoginModal();
+            } else {
+                initDataCenter();
+            }
+        });
+
+        function showLoginModal() {
+            document.getElementById("login-overlay").style.display = "flex";
+        }
+
+        // Login Handler
+        document.getElementById("login-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const uIdVal = document.getElementById("user-id").value.trim();
+            const uKeyVal = document.getElementById("user-api-key").value.trim();
+            const errorAlert = document.getElementById("login-error");
+
+            errorAlert.style.display = "none";
+
+            try {
+                const response = await fetch(`${API_BASE}/api/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user_id: uIdVal, api_key: uKeyVal })
+                });
+
+                if (response.ok) {
+                    localStorage.setItem("orchardeye_user_id", uIdVal);
+                    localStorage.setItem("orchardeye_user_api_key", uKeyVal);
+                    document.getElementById("login-overlay").style.display = "none";
+                    location.reload();
+                } else {
+                    const data = await response.json();
+                    errorAlert.textContent = data.detail || "Authentication failed. Check details.";
+                    errorAlert.style.display = "block";
+                }
+            } catch (err) {
+                console.error(err);
+                errorAlert.textContent = "Unable to connect to the backend server.";
+                errorAlert.style.display = "block";
+            }
+        });
+
+        // Logout action
+        document.getElementById("logout-btn").addEventListener("click", () => {
+            localStorage.removeItem("orchardeye_user_id");
+            localStorage.removeItem("orchardeye_user_api_key");
+            location.reload();
+        });
+
+        // Fetch Data and Initialize
+        async function initDataCenter() {
+            document.getElementById("user-display").textContent = `Logged in: ${userId}`;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/user/data`, {
+                    headers: { "X-User-ID": userId, "X-User-API-Key": apiKey }
+                });
+
+                if (response.status === 401) {
+                    localStorage.removeItem("orchardeye_user_id");
+                    localStorage.removeItem("orchardeye_user_api_key");
+                    showLoginModal();
+                    return;
+                }
+
+                if (!response.ok) throw new Error("Failed to fetch database content");
+
+                allRecords = await response.json();
+                populateTrapDropdown();
+                renderDashboard("ALL");
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById("data-error-msg").textContent = "Could not load data logs. Ensure your API is running and credentials are valid.";
+                document.getElementById("data-error-msg").style.display = "block";
+            }
+        }
+
+        // Populates filter dropdown with unique trap IDs found in records
+        function populateTrapDropdown() {
+            const selectEl = document.getElementById("trap-filter");
+            const trapIds = [...new Set(allRecords.map(r => r.trap_id))];
+            
+            trapIds.forEach(id => {
+                const option = document.createElement("option");
+                option.value = id;
+                option.textContent = id;
+                selectEl.appendChild(option);
+            });
+
+            selectEl.addEventListener("change", (e) => {
+                renderDashboard(e.target.value);
+            });
+        }
+
+        // Filter and Render UI components
+        function renderDashboard(filterTrapId) {
+            const filtered = filterTrapId === "ALL" 
+                ? allRecords 
+                : allRecords.filter(r => r.trap_id === filterTrapId);
+
+            document.getElementById("record-count").textContent = filtered.length;
+
+            // Render Table
+            const tableBody = document.getElementById("telemetry-table-body");
+            tableBody.innerHTML = "";
+
+            if (filtered.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No records found.</td></tr>`;
+            } else {
+                filtered.forEach(row => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td style="font-weight: 600; color: var(--accent);">${row.trap_id}</td>
+                        <td>${row.district}, ${row.village}</td>
+                        <td>${row.timestamp}</td>
+                        <td>${row.temperature !== null ? row.temperature : 'N/A'}</td>
+                        <td>${row.humidity !== null ? row.humidity : 'N/A'}</td>
+                        <td>${row.battery !== null ? row.battery : 'N/A'}</td>
+                        <td><span class="badge ${row.processing_status === 'PENDING' ? 'badge-pending' : 'badge-approved'}">${row.processing_status}</span></td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+            }
+
+            // Render Image Gallery
+            const galleryEl = document.getElementById("gallery");
+            const emptyEl = document.getElementById("gallery-empty");
+            galleryEl.innerHTML = "";
+
+            const imagesOnly = filtered.filter(row => row.image_url);
+
+            if (imagesOnly.length === 0) {
+                emptyEl.style.display = "block";
+            } else {
+                emptyEl.style.display = "none";
+                imagesOnly.forEach(row => {
+                    const fullImgUrl = `${API_BASE}${row.image_url}?user_id=${encodeURIComponent(userId)}&api_key=${encodeURIComponent(apiKey)}`;
+                    const item = document.createElement("div");
+                    item.className = "gallery-item";
+                    item.innerHTML = `
+                        <img src="${fullImgUrl}" alt="Trap Capture">
+                        <div class="gallery-info">${row.trap_id} (${row.timestamp.split(' ')[0]})</div>
+                    `;
+                    
+                    item.addEventListener("click", () => openImageDetail(row, fullImgUrl));
+                    galleryEl.appendChild(item);
+                });
+            }
+        }
+
+        // Open detailed popup
+        function openImageDetail(record, imageUrl) {
+            const modal = document.getElementById("image-modal");
+            const modalImg = document.getElementById("modal-target-img");
+            const metaDiv = document.getElementById("modal-img-meta");
+
+            modalImg.src = imageUrl;
+            metaDiv.innerHTML = `
+                <p><b>Trap ID:</b> ${record.trap_id}</p>
+                <p><b>Location:</b> ${record.district}, ${record.village}</p>
+                <p><b>Timestamp:</b> ${record.timestamp}</p>
+                <p><b>Temp/Humidity:</b> ${record.temperature !== null ? record.temperature + ' °C' : 'N/A'} / ${record.humidity !== null ? record.humidity + '%' : 'N/A'}</p>
+                <p><b>Battery:</b> ${record.battery !== null ? record.battery + '%' : 'N/A'}</p>
+                <p><b>AI Status:</b> ${record.processing_status}</p>
+            `;
+            
+            modal.style.display = "flex";
+        }
+
+        // Close image modal when clicking overlay/close button
+        document.getElementById("image-modal").addEventListener("click", () => {
+            document.getElementById("image-modal").style.display = "none";
+        });
+        document.getElementById("close-img-modal").addEventListener("click", () => {
+            document.getElementById("image-modal").style.display = "none";
+        });
+    </script>
+</body>
+</html>

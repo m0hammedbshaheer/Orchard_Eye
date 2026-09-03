@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - OrchardEye</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Admin Login Modal Overlay -->
+    <div id="login-overlay" class="login-overlay" style="display: none;">
+        <div class="glass-card login-card text-center">
+            <h2 style="color: var(--accent); font-size: 1.8rem; margin-bottom: 6px;">Admin Access</h2>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 24px;">Enter administrative credentials to proceed</p>
+            
+            <div id="login-error" class="alert alert-danger" style="display: none;"></div>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="admin-login-id">Admin Login ID</label>
+                    <input type="text" id="admin-login-id" class="form-control" placeholder="Admin username" required>
+                </div>
+                <div class="form-group">
+                    <label for="admin-api-key">Admin API Key</label>
+                    <input type="password" id="admin-api-key" class="form-control" placeholder="Admin secret key" required>
+                </div>
+                <button type="submit" class="btn">Authenticate</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Trap API Key Pop-up Modal -->
+    <div id="api-key-modal" class="login-overlay" style="display: none;">
+        <div class="glass-card text-center" style="max-width: 500px;">
+            <h3 style="color: var(--accent); font-size: 1.6rem; margin-bottom: 12px;">Trap Created Successfully</h3>
+            <p style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 20px;">
+                Please copy the API key below. It will <b>never</b> be shown again in plaintext format!
+            </p>
+            <div class="form-group">
+                <label>Generated API Key</label>
+                <input type="text" id="generated-key-field" class="form-control" style="background: rgba(132, 204, 22, 0.1); border-color: var(--accent); font-family: monospace; text-align: center;" readonly>
+            </div>
+            <button id="close-api-modal-btn" class="btn">Done</button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="nav-container">
+            <div class="brand-wrapper">
+                <img src="Assets/Caiml.png" alt="CAIML Logo" class="brand-logo">
+                <span class="brand-title">OrchardEye</span>
+            </div>
+            <nav class="options">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="map.html">Live Map</a></li>
+                    <li><a href="data.html">Collected Data</a></li>
+                    <li><a href="request-api.html">Request API</a></li>
+                    <li><a href="admin.html" class="active">Admin Panel</a></li>
+                    <li><a href="about.html">About Us</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="container">
+        <div class="admin-header">
+            <div>
+                <h1 style="font-size: 2.2rem;">OrchardEye Command Center</h1>
+                <p style="color: var(--text-secondary); font-size: 0.95rem;">Manage user key approval requests, trap registrations, and database operations</p>
+            </div>
+            <div class="user-info">
+                <span id="admin-display" style="font-size: 0.9rem; color: var(--accent);">Logged in: Admin</span>
+                <button id="logout-btn" class="btn btn-secondary btn-sm">Log Out</button>
+            </div>
+        </div>
+
+        <div id="global-success" class="alert alert-success" style="display: none; margin-bottom: 20px;"></div>
+        <div id="global-error" class="alert alert-danger" style="display: none; margin-bottom: 20px;"></div>
+
+        <div class="admin-sections">
+            <!-- 1. API Key Requests Section -->
+            <section class="glass-card">
+                <h2 style="color: var(--accent); font-size: 1.4rem; margin-bottom: 20px;">User API Key Requests</h2>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Email</th>
+                                <th>Requested At</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="requests-table-body">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: var(--text-muted);">Loading requests...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 2. Trap Management Grid -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+                <!-- Trap List -->
+                <section class="glass-card">
+                    <h2 style="color: var(--accent); font-size: 1.4rem; margin-bottom: 20px;">Registered Traps</h2>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <th>Trap ID</th>
+                                <th>District / Village</th>
+                                <th>Coordinates</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </thead>
+                            <tbody id="traps-table-body">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: var(--text-muted);">Loading registered traps...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- New Trap Registration -->
+                <section class="glass-card">
+                    <h2 style="color: var(--accent); font-size: 1.4rem; margin-bottom: 20px;">Register New Trap</h2>
+                    <form id="create-trap-form">
+                        <div class="form-group">
+                            <label for="trap-id">Trap ID</label>
+                            <input type="text" id="new-trap-id" class="form-control" placeholder="TRAP_05" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="trap-district">District</label>
+                            <input type="text" id="new-trap-district" class="form-control" placeholder="Srinagar" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="trap-village">Village</label>
+                            <input type="text" id="new-trap-village" class="form-control" placeholder="Harwan" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="trap-lat">Latitude</label>
+                            <input type="number" step="any" id="new-trap-lat" class="form-control" placeholder="34.15" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="trap-lng">Longitude</label>
+                            <input type="number" step="any" id="new-trap-lng" class="form-control" placeholder="74.88" required>
+                        </div>
+                        <button type="submit" class="btn">Register Trap</button>
+                    </form>
+                </section>
+            </div>
+
+            <!-- 3. Raw Database Console -->
+            <section class="glass-card">
+                <h2 style="color: var(--accent); font-size: 1.4rem; margin-bottom: 8px;">Raw Database Terminal</h2>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;">Execute raw SQL statements against the backend database.</p>
+                
+                <form id="query-form">
+                    <div class="form-group">
+                        <label for="sql-query">SQL Statement</label>
+                        <textarea id="sql-query" class="form-control" style="font-family: monospace; height: 100px; resize: vertical;" placeholder="SELECT * FROM preprocessed ORDER BY timestamp DESC LIMIT 5;" required></textarea>
+                    </div>
+                    <button type="submit" class="btn" style="width: auto;">Execute Query</button>
+                </form>
+
+                <div id="query-result-wrapper" style="margin-top: 24px; display: none;">
+                    <h4 style="font-size: 1rem; color: var(--accent); margin-bottom: 10px;">Execution Result:</h4>
+                    <div class="table-responsive" style="background: rgba(0, 0, 0, 0.4); border-radius: 8px; border: 1px solid var(--border-color); max-height: 400px; overflow-y: auto;">
+                        <table id="query-result-table">
+                            <thead id="query-result-head"></thead>
+                            <tbody id="query-result-body"></tbody>
+                        </table>
+                        <div id="query-raw-output" style="padding: 16px; font-family: monospace; font-size: 0.85rem; color: var(--text-secondary); white-space: pre-wrap;"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div>
+            <p>Developed at SKUAST-K CAIML (Center for AI & Machine Learning)</p>
+            <p style="font-size: 0.8rem; margin-top: 4px; color: var(--text-muted);">&copy; 2026 OrchardEye Project. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_BASE = "http://localhost:8000";
+        let adminId = "";
+        let adminKey = "";
+
+        // Check authentication
+        document.addEventListener("DOMContentLoaded", () => {
+            adminId = localStorage.getItem("orchardeye_admin_id");
+            adminKey = localStorage.getItem("orchardeye_admin_key");
+
+            if (!adminId || !adminKey) {
+                showLoginModal();
+            } else {
+                initAdminDashboard();
+            }
+        });
+
+        function showLoginModal() {
+            document.getElementById("login-overlay").style.display = "flex";
+        }
+
+        // Login Handler
+        document.getElementById("login-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const idVal = document.getElementById("admin-login-id").value.trim();
+            const keyVal = document.getElementById("admin-api-key").value.trim();
+            const errorBox = document.getElementById("login-error");
+
+            errorBox.style.display = "none";
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        admin_login_id: idVal,
+                        admin_api_key: keyVal
+                    })
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    errorBox.textContent = data.detail || "Invalid admin credentials.";
+                    errorBox.style.display = "block";
+                    return;
+                }
+
+                localStorage.setItem("orchardeye_admin_id", idVal);
+                localStorage.setItem("orchardeye_admin_key", keyVal);
+                document.getElementById("login-overlay").style.display = "none";
+                location.reload();
+            } catch (err) {
+                errorBox.textContent = "Unable to connect to the backend server.";
+                errorBox.style.display = "block";
+            }
+        });
+
+        // Logout
+        document.getElementById("logout-btn").addEventListener("click", () => {
+            localStorage.removeItem("orchardeye_admin_id");
+            localStorage.removeItem("orchardeye_admin_key");
+            location.reload();
+        });
+
+        // Initialize dashboard operations
+        function initAdminDashboard() {
+            document.getElementById("admin-display").textContent = `Logged in: ${adminId}`;
+            loadRequests();
+            loadTraps();
+        }
+
+        // Helper to handle admin API requests
+        async function adminFetch(endpoint, options = {}) {
+            const url = `${API_BASE}${endpoint}`;
+            const headers = {
+                "X-Admin-Login-ID": adminId,
+                "X-Admin-API-Key": adminKey,
+                "Content-Type": "application/json",
+                ...options.headers
+            };
+
+            const response = await fetch(url, { ...options, headers });
+            
+            if (response.status === 401) {
+                localStorage.removeItem("orchardeye_admin_id");
+                localStorage.removeItem("orchardeye_admin_key");
+                showLoginModal();
+                throw new Error("Admin credentials unauthorized");
+            }
+            return response;
+        }
+
+        function showSuccess(msg) {
+            const box = document.getElementById("global-success");
+            box.textContent = msg;
+            box.style.display = "block";
+            setTimeout(() => box.style.display = "none", 4000);
+        }
+
+        function showError(msg) {
+            const box = document.getElementById("global-error");
+            box.textContent = msg;
+            box.style.display = "block";
+            setTimeout(() => box.style.display = "none", 6000);
+        }
+
+        // 1. Requests list
+        async function loadRequests() {
+            const tbody = document.getElementById("requests-table-body");
+            try {
+                const response = await adminFetch("/admin/requests");
+                if (!response.ok) throw new Error();
+                const requests = await response.json();
+
+                tbody.innerHTML = "";
+                if (requests.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No key requests submitted.</td></tr>`;
+                    return;
+                }
+
+                requests.forEach(req => {
+                    const tr = document.createElement("tr");
+                    
+                    let actionHtml = "-";
+                    if (req.status === "PENDING") {
+                        actionHtml = `
+                            <button class="btn btn-sm" onclick="approveRequest(${req.id})" style="margin-right: 8px;">Approve</button>
+                            <button class="btn btn-secondary btn-sm" onclick="rejectRequest(${req.id})">Reject</button>
+                        `;
+                    }
+
+                    tr.innerHTML = `
+                        <td>${req.id}</td>
+                        <td style="font-weight: 500;">${req.email}</td>
+                        <td>${req.created_at}</td>
+                        <td><span class="badge badge-${req.status.toLowerCase()}">${req.status}</span></td>
+                        <td>${actionHtml}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger);">Failed to load requests from server.</td></tr>`;
+            }
+        }
+
+        async function approveRequest(requestId) {
+            try {
+                const res = await adminFetch(`/admin/requests/${requestId}/approve`, { method: "POST" });
+                const data = await res.json();
+                if (res.ok) {
+                    showSuccess(`Request approved! User ID: ${data.user_id}`);
+                    loadRequests();
+                } else {
+                    showError(data.detail || "Approval failed.");
+                }
+            } catch (err) {
+                showError("Network connection error.");
+            }
+        }
+
+        async function rejectRequest(requestId) {
+            try {
+                const res = await adminFetch(`/admin/requests/${requestId}/reject`, { method: "POST" });
+                if (res.ok) {
+                    showSuccess("Request rejected.");
+                    loadRequests();
+                } else {
+                    const data = await res.json();
+                    showError(data.detail || "Rejection failed.");
+                }
+            } catch (err) {
+                showError("Network connection error.");
+            }
+        }
+
+        // 2. Traps list
+        async function loadTraps() {
+            const tbody = document.getElementById("traps-table-body");
+            try {
+                const response = await adminFetch("/admin/traps");
+                if (!response.ok) throw new Error();
+                const traps = await response.json();
+
+                tbody.innerHTML = "";
+                if (traps.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No traps registered.</td></tr>`;
+                    return;
+                }
+
+                traps.forEach(trap => {
+                    const tr = document.createElement("tr");
+                    
+                    const statusText = trap.active ? "Active" : "Inactive";
+                    const statusClass = trap.active ? "badge-approved" : "badge-rejected";
+
+                    tr.innerHTML = `
+                        <td style="font-weight: bold; color: var(--accent);">${trap.trap_id}</td>
+                        <td>${trap.district} / ${trap.village}</td>
+                        <td>${trap.latitude.toFixed(4)}, ${trap.longitude.toFixed(4)}</td>
+                        <td><span class="badge ${statusClass}">${statusText}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-secondary" onclick="toggleTrap('${trap.trap_id}', ${trap.active})" style="margin-right: 6px;">Toggle Status</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteTrap('${trap.trap_id}')">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger);">Failed to load registered traps.</td></tr>`;
+            }
+        }
+
+        async function toggleTrap(trapId, currentActive) {
+            try {
+                const res = await adminFetch(`/admin/traps/${trapId}`, {
+                    method: "PUT",
+                    body: JSON.stringify({ active: !currentActive })
+                });
+                if (res.ok) {
+                    showSuccess(`Trap '${trapId}' status updated successfully.`);
+                    loadTraps();
+                } else {
+                    const data = await res.json();
+                    showError(data.detail || "Failed to toggle status.");
+                }
+            } catch (err) {
+                showError("Network connection error.");
+            }
+        }
+
+        async function deleteTrap(trapId) {
+            if (!confirm(`Are you absolutely sure you want to delete trap '${trapId}'? This will permanently delete all associated telemetry logs and pictures.`)) {
+                return;
+            }
+
+            try {
+                const res = await adminFetch(`/admin/traps/${trapId}`, { method: "DELETE" });
+                if (res.ok) {
+                    showSuccess(`Trap '${trapId}' and all associated records deleted.`);
+                    loadTraps();
+                } else {
+                    const data = await res.json();
+                    showError(data.detail || "Failed to delete trap.");
+                }
+            } catch (err) {
+                showError("Network connection error.");
+            }
+        }
+
+        // Register Trap Form
+        document.getElementById("create-trap-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            const payload = {
+                trap_id: document.getElementById("new-trap-id").value.trim(),
+                district: document.getElementById("new-trap-district").value.trim(),
+                village: document.getElementById("new-trap-village").value.trim(),
+                latitude: parseFloat(document.getElementById("new-trap-lat").value),
+                longitude: parseFloat(document.getElementById("new-trap-lng").value),
+                active: true
+            };
+
+            try {
+                const res = await adminFetch("/admin/traps", {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    document.getElementById("create-trap-form").reset();
+                    loadTraps();
+                    
+                    // Show generated API key pop-up modal
+                    document.getElementById("generated-key-field").value = data.api_key;
+                    document.getElementById("api-key-modal").style.display = "flex";
+                } else {
+                    showError(data.detail || "Failed to register trap.");
+                }
+            } catch (err) {
+                showError("Network connection error.");
+            }
+        });
+
+        document.getElementById("close-api-modal-btn").addEventListener("click", () => {
+            document.getElementById("api-key-modal").style.display = "none";
+        });
+
+        // 3. Raw Query console
+        document.getElementById("query-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const sqlText = document.getElementById("sql-query").value.trim();
+            const wrapper = document.getElementById("query-result-wrapper");
+            const head = document.getElementById("query-result-head");
+            const tbody = document.getElementById("query-result-body");
+            const rawOutput = document.getElementById("query-raw-output");
+
+            wrapper.style.display = "block";
+            head.innerHTML = "";
+            tbody.innerHTML = "";
+            rawOutput.textContent = "Executing...";
+
+            try {
+                const res = await adminFetch("/admin/query", {
+                    method: "POST",
+                    body: JSON.stringify({ query: sqlText })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    if (data.type === "select") {
+                        rawOutput.textContent = "";
+                        // Render Select results table
+                        if (data.results.length === 0) {
+                            tbody.innerHTML = `<tr><td style="text-align: center; color: var(--text-muted);">Query succeeded, but returned 0 rows.</td></tr>`;
+                            return;
+                        }
+
+                        // Create Headers
+                        const headerTr = document.createElement("tr");
+                        data.columns.forEach(col => {
+                            const th = document.createElement("th");
+                            th.textContent = col;
+                            headerTr.appendChild(th);
+                        });
+                        head.appendChild(headerTr);
+
+                        // Populate rows
+                        data.results.forEach(row => {
+                            const tr = document.createElement("tr");
+                            data.columns.forEach(col => {
+                                const td = document.createElement("td");
+                                td.textContent = row[col] !== null ? row[col] : "NULL";
+                                tr.appendChild(td);
+                            });
+                            tbody.appendChild(tr);
+                        });
+                    } else {
+                        // Insert/Update/Delete results
+                        rawOutput.textContent = `Success!\nRows Affected: ${data.row_count}\nLast Row ID: ${data.last_row_id}`;
+                    }
+                } else {
+                    rawOutput.textContent = `Error: ${data.detail || "Query execution failed."}`;
+                }
+            } catch (err) {
+                rawOutput.textContent = "Network error connecting to DB console.";
+            }
+        });
+    </script>
+</body>
+</html>
